@@ -25,6 +25,7 @@ namespace KyoshinEewViewer.Services
 		{
 			{ "通常", "Standard" },
 			{ "ビビッド", "Vivid" },
+			{ "Quarog", "Quarog" },
 		};
 
 		public static IReadOnlyDictionary<string, string> IntensityThemes => intensityThemes;
