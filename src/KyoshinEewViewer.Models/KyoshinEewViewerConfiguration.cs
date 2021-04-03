@@ -292,11 +292,11 @@ namespace KyoshinEewViewer.Models
 				set => SetProperty(ref useWebSocket, value);
 			}
 
-			private int pullInterval = 1;
-			public int PullInterval
+			private double pullMultiply = 1;
+			public double PullMultiply
 			{
-				get => pullInterval;
-				set => SetProperty(ref pullInterval, value);
+				get => pullMultiply;
+				set => SetProperty(ref pullMultiply, value);
 			}
 		}
 

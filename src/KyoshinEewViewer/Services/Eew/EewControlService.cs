@@ -82,9 +82,9 @@ namespace KyoshinEewViewer.Services.Eew
 			// 新しいデータ or 元のソースがSNPであれば置き換え
 			if (!EewCache.TryGetValue(eew.Id, out var cEew)
 				 || eew.Count > cEew.Count
-				 || cEew.Source == Models.EewSource.SignalNowProfessional)
+				 || (eew.Count >= cEew.Count && cEew.Source == Models.EewSource.SignalNowProfessional))
 			{
-				Logger.Info($"EEWを更新しました source:{eew.Source} id:{eew.Id} cound:{eew.Count} isFinal:{eew.IsFinal} updatedTime:{eew.UpdatedTime:yyyy/MM/dd HH:mm:ss.fff} ");
+				Logger.Info($"EEWを更新しました source:{eew.Source} id:{eew.Id} count:{eew.Count} isFinal:{eew.IsFinal} updatedTime:{eew.UpdatedTime:yyyy/MM/dd HH:mm:ss.fff} ");
 				EewCache[eew.Id] = eew;
 				isUpdated = true;
 			}

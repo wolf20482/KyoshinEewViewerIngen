@@ -470,12 +470,12 @@
 							<TextBlock Text="有効の場合、WebSocketの接続数を1消費し、リアルタイム性を向上します。&#xa;失敗した場合、自動でPULL型が使用されます。" TextWrapping="WrapWithOverflow" Foreground="{DynamicResource SubForegroundColor}" FontSize="12" />
 							<DockPanel Margin="0,5,0,0">
 								<TextBlock Foreground="{DynamicResource ForegroundColor}" DockPanel.Dock="Left" VerticalAlignment="Center">
-									<Run Text="PULL型取得間隔" />
+									<Run Text="PULL型取得倍率" />
 								</TextBlock>
-								<TextBlock Foreground="{DynamicResource ForegroundColor}" Text="{Binding Config.Dmdata.PullInterval, StringFormat={}{0}秒ごと}" TextAlignment="Right" Width="60" DockPanel.Dock="Right" />
-								<Slider Maximum="60" Minimum="1" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding Config.Dmdata.PullInterval}" VerticalAlignment="Center" />
+								<TextBlock Foreground="{DynamicResource ForegroundColor}" Text="{Binding Config.Dmdata.PullMultiply, StringFormat={}{0:0.0}倍}" TextAlignment="Right" Width="45" DockPanel.Dock="Right" />
+								<Slider Maximum="10" Minimum="1" TickFrequency="0.1" IsSnapToTickEnabled="True" Value="{Binding Config.Dmdata.PullMultiply}" VerticalAlignment="Center" />
 							</DockPanel>
-							<TextBlock Text="PULL型を使用中の場合の取得間隔を指定します。APIレートリミットに引っかかる場合は期間を伸ばしてください。" TextWrapping="WrapWithOverflow" Foreground="{DynamicResource SubForegroundColor}" FontSize="12" />
+							<TextBlock Text="PULL型を使用中の場合の取得間隔を指定します。しますが。" TextWrapping="WrapWithOverflow" Foreground="{DynamicResource SubForegroundColor}" FontSize="12" />
 						</StackPanel>
 						<GroupBox>
 							<GroupBox.Header>

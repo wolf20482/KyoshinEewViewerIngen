@@ -1,5 +1,6 @@
 ﻿using DmdataSharp;
-using DmdataSharp.ApiResponses;
+using DmdataSharp.ApiResponses.V2;
+using DmdataSharp.Authentication;
 using DmdataSharp.Exceptions;
 using KyoshinEewViewer.Models;
 using KyoshinEewViewer.Models.Events;
@@ -22,7 +23,7 @@ namespace KyoshinEewViewer.Services
 		public List<Earthquake> Earthquakes { get; } = new List<Earthquake>();
 		private EarthquakeUpdated EarthquakeUpdated { get; }
 
-		public BillingResponse BillingInfo { get; private set; }
+		public DmdataSharp.ApiResponses.V1.BillingResponse BillingInfo { get; private set; }
 		public DmdataBillingInfoUpdated BillingInfoUpdated { get; }
 		public bool IgnoreBillingstatusCheck { get; private set; }
 
@@ -55,15 +56,15 @@ namespace KyoshinEewViewer.Services
 		public Timer PullingTimer { get; }
 
 		private Random Random { get; } = new Random();
-		private DmdataApiClient ApiClient { get; }
-		private DmdataSocket DmdataSocket { get; set; }
+		private DmdataV2ApiClient ApiClient { get; }
+		private DmdataV2Socket DmdataSocket { get; set; }
 		private LoggerService Logger { get; }
 		private ConfigurationService ConfigService { get; }
 
 		/// <summary>
 		/// telegram.listで使用するAPI
 		/// </summary>
-		private int NewCatch { get; set; }
+		private string NextPooling { get; set; }
 
 		private XmlSerializer ReportSerializer { get; } = new XmlSerializer(typeof(Report));
 		private readonly string[] ParseTitles = { "震度速報", "震源に関する情報", "震源・震度に関する情報" };
@@ -72,7 +73,7 @@ namespace KyoshinEewViewer.Services
 		{
 			ConfigService = configService;
 			Logger = logger;
-			ApiClient = new DmdataApiClient(ConfigService.Configuration.Dmdata.ApiKey);
+			ApiClient = DmdataApiClientBuilder.Default.UseApiKey(ConfigService.Configuration.Dmdata.ApiKey).BuildV2ApiClient();
 
 			EarthquakeUpdated = eventAggregator.GetEvent<EarthquakeUpdated>();
 			BillingInfoUpdated = eventAggregator.GetEvent<DmdataBillingInfoUpdated>();
@@ -84,7 +85,8 @@ namespace KyoshinEewViewer.Services
 				{
 					case nameof(ConfigService.Configuration.Dmdata.ApiKey):
 						Logger.Info("dmdataのAPIキーが更新されました");
-						ApiClient.ApiKey = ConfigService.Configuration.Dmdata.ApiKey;
+						if (ApiClient.Authenticator is ApiKeyAuthenticator apiKeyAuthenticator)
+							apiKeyAuthenticator.ApiKey = ConfigService.Configuration.Dmdata.ApiKey;
 
 						await InitalizeAsync().ConfigureAwait(false);
 						break;
@@ -133,9 +135,10 @@ namespace KyoshinEewViewer.Services
 
 			try
 			{
+				Logger.Debug("get telegram list: " + NextPooling);
 				// 初回取得は震源震度に関する情報だけにしておく
-				var resp = await ApiClient.GetTelegramListAsync(type: firstSync ? "VXSE53" : "VXSE5", xml: true, newCatch: NewCatch, limit: 5);
-				NewCatch = resp.NewCatch;
+				var resp = await ApiClient.GetTelegramListAsync(type: firstSync ? "VXSE53" : "VXSE5", xmlReport: true, cursorToken: NextPooling, limit: 5);
+				NextPooling = resp.NextPooling;
 
 				// TODO: リトライ処理の実装
 				if (resp.Status != "ok")
@@ -148,11 +151,11 @@ namespace KyoshinEewViewer.Services
 				foreach (var item in resp.Items)
 				{
 					// 解析すべき情報だけ取ってくる
-					if (!ParseTitles.Contains(item.XmlData.Control.Title))
+					if (item.Format != "xml" || !ParseTitles.Contains(item.XmlReport.Control.Title))
 						continue;
 
-					Logger.Info("dmdataから取得しています: " + item.Key);
-					using var rstr = await ApiClient.GetTelegramStreamAsync(item.Key);
+					Logger.Info("dmdataから取得しています: " + item.Id);
+					using var rstr = await ApiClient.GetTelegramStreamAsync(item.Id);
 					var report = (Report)ReportSerializer.Deserialize(rstr);
 
 					ProcessReport(report, firstSync);
@@ -161,13 +164,18 @@ namespace KyoshinEewViewer.Services
 				if (firstSync)
 					EarthquakeUpdated.Publish(null);
 
-				// 設定値の1～1.2倍のランダム間隔でリクエストを行う
-				PullingTimer.Change(TimeSpan.FromSeconds(ConfigService.Configuration.Dmdata.PullInterval * (1 + Random.NextDouble() * .2)), Timeout.InfiniteTimeSpan);
+				Logger.Debug("get telegram list nextpooling: " + resp.NextPoolingInterval);
+				// レスポンスの時間*設定での倍率*1～1.2倍のランダム間隔でリクエストを行う
+				PullingTimer.Change(TimeSpan.FromMilliseconds(resp.NextPoolingInterval * Math.Max(ConfigService.Configuration.Dmdata.PullMultiply, 1) * (1 + Random.NextDouble() * .2)), Timeout.InfiniteTimeSpan);
 			}
 			catch (DmdataForbiddenException ex)
 			{
 				Logger.Error("必須APIを利用する権限がないもしくはAPIキーが不正です\n" + ex);
 				Status = DmdataStatus.StoppingForInvalidKey;
+			}
+			catch (Exception ex)
+			{
+				Logger.Error("dmdataへのリクエストに失敗しました\n" + ex);
 			}
 		}
 		private void ProcessReport(Report report, bool firstSync)
@@ -284,15 +292,11 @@ namespace KyoshinEewViewer.Services
 					DmdataSocket.Dispose();
 					DmdataSocket = null;
 				}
-				DmdataSocket = new DmdataSocket(ApiClient);
+				DmdataSocket = new DmdataV2Socket(ApiClient);
 				DmdataSocket.Connected += (s, e) =>
 				{
 					Logger.Info("WebSocketに接続完了しました " + e.Type);
 					Status = DmdataStatus.UsingWebSocket;
-				};
-				DmdataSocket.ConnectionFull += (s, e) =>
-				{
-					Status = DmdataStatus.UsingPullForError;
 				};
 				DmdataSocket.Disconnected += async (s, e) =>
 				{
@@ -304,42 +308,35 @@ namespace KyoshinEewViewer.Services
 				{
 					switch (e.Code)
 					{
-						// 手動での切断 or 契約終了の場合はPULL型に変更して切断
-						case "socket.end":
-						case "contract.end":
-							Status = DmdataStatus.UsingPullForError;
-							await DmdataSocket.DisconnectAsync();
+						// サーバー再起動･契約解約の場合は再接続を試みる
+						case 4503:
+						case 4807:
+							await TryConnectWebSocketAsync();
 							return;
 					}
-					// それ以外の場合かつ切断された場合は再接続を試みる
-					if (e.Action == "close")
-						await TryConnectWebSocketAsync();
+					// それ以外の場合はエラー扱いとしてPULL型へ
+					Status = DmdataStatus.UsingPullForError;
+					await DmdataSocket.DisconnectAsync();
 				};
 				DmdataSocket.DataReceived += async (s, e) =>
 				{
-					Logger.Info("WebSocket受信: " + e.Key);
-					// XML電文でない場合処理を行わない
-					if (!e.Data.Xml)
-					{
-						Logger.Info("XML電文ではないためパースを行いません");
-						return;
-					}
+					Logger.Info("WebSocket受信: " + e.Id);
 					// 処理できない電文を処理しない
-					if (!ParseTitles.Contains(e.XmlData.Control.Title))
+					if (e.XmlReport == null || !ParseTitles.Contains(e.XmlReport.Control?.Title))
 						return;
 
-					// 検証が正しくない場合はパケットが破損しているのでKeyで取得し直す
+					// 検証が正しくない場合はパケットが破損しているのでIdで取得し直す
 					if (!e.Validate())
 					{
 						try
 						{
-							Logger.Warning("WebSocketで受信した " + e.Key + " の検証に失敗しています");
-							using var rstr = await ApiClient.GetTelegramStreamAsync(e.Key);
+							Logger.Warning("WebSocketで受信した " + e.Id + " の検証に失敗しています");
+							using var rstr = await ApiClient.GetTelegramStreamAsync(e.Id);
 							ProcessReport((Report)ReportSerializer.Deserialize(rstr), false);
 						}
 						catch (Exception ex)
 						{
-							Logger.Error("WebSocketで受信した " + e.Key + " の再取得に失敗しました" + ex);
+							Logger.Error("WebSocketで受信した " + e.Id + " の再取得に失敗しました" + ex);
 						}
 						return;
 					}
@@ -348,7 +345,15 @@ namespace KyoshinEewViewer.Services
 					ProcessReport((Report)ReportSerializer.Deserialize(stream), false);
 				};
 
-				await DmdataSocket.ConnectAsync(new[] { TelegramCategory.Earthquake }, "KEVi " + Assembly.GetExecutingAssembly().GetName().Version);
+				await DmdataSocket.ConnectAsync(new DmdataSharp.ApiParameters.V2.SocketStartRequestParameter(TelegramCategoryV1.Earthquake)
+				{
+					AppName = "KEVi " + Assembly.GetExecutingAssembly().GetName().Version,
+					Types = new[] {
+						"VXSE51",
+						"VXSE52",
+						"VXSE53",
+					},
+				});
 			}
 			catch (DmdataForbiddenException ex)
 			{
@@ -383,8 +388,8 @@ namespace KyoshinEewViewer.Services
 			}
 			BillingInfoUpdated.Publish();
 
-			// サーバー負荷軽減のためランダムに5～10分の遅延を入れる
-			UpdateBillingStatusTimer.Change(TimeSpan.FromSeconds(Random.Next(5 * 60, 10 * 60)), Timeout.InfiniteTimeSpan);
+			// サーバー負荷軽減のためランダムに10～60分の遅延を入れる
+			UpdateBillingStatusTimer.Change(TimeSpan.FromSeconds(Random.Next(10 * 60, 60 * 60)), Timeout.InfiniteTimeSpan);
 		}
 	}
 
