@@ -173,10 +173,6 @@ namespace KyoshinEewViewer.Services
 				Logger.Error("必須APIを利用する権限がないもしくはAPIキーが不正です\n" + ex);
 				Status = DmdataStatus.StoppingForInvalidKey;
 			}
-			catch (Exception ex)
-			{
-				Logger.Error("dmdataへのリクエストに失敗しました\n" + ex);
-			}
 		}
 		private void ProcessReport(Report report, bool firstSync)
 		{
@@ -301,8 +297,6 @@ namespace KyoshinEewViewer.Services
 				DmdataSocket.Disconnected += async (s, e) =>
 				{
 					Logger.Info("WebSocketから切断されました");
-					// 再接続を試みる,接続不可の場合自動でキャンセル、ステータスの更新が行われる
-					await TryConnectWebSocketAsync();
 				};
 				DmdataSocket.Error += async (s, e) =>
 				{
@@ -341,8 +335,15 @@ namespace KyoshinEewViewer.Services
 						return;
 					}
 
-					using var stream = e.GetBodyStream();
-					ProcessReport((Report)ReportSerializer.Deserialize(stream), false);
+					try
+					{
+						using var stream = e.GetBodyStream();
+						ProcessReport((Report)ReportSerializer.Deserialize(stream), false);
+					}
+					catch (Exception ex)
+					{
+						Logger.Error("WebSocketで受信した " + e.Id + " の処理に失敗しました" + ex);
+					}
 				};
 
 				await DmdataSocket.ConnectAsync(new DmdataSharp.ApiParameters.V2.SocketStartRequestParameter(TelegramCategoryV1.Earthquake)
@@ -380,7 +381,7 @@ namespace KyoshinEewViewer.Services
 				BillingInfo = await ApiClient.GetBillingInfoAsync();
 				Logger.Info("課金情報を更新しました。");
 			}
-			catch (DmdataException ex)
+			catch (Exception ex)
 			{
 				Logger.Error("課金情報取得中に例外が発生しました。以降の課金情報の取得を中断します。\n" + ex);
 				IgnoreBillingstatusCheck = true;
