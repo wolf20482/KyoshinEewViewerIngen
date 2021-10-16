@@ -34,7 +34,7 @@ namespace KyoshinEewViewer.Services
 
 
 		private const string UpdateCheckUrl = "https://svs.ingen084.net/kyoshineewviewer/updates.json";
-		private const string UpdatersCheckUrl = "https://svs.ingen084.net/kyoshineewviewer/Updaters.json";
+		private const string UpdatersCheckUrl = "https://svs.ingen084.net/kyoshineewviewer/updaters.json";
 		//"https://jenkins.ingen084.net/job/KyoshinEewViewerIngen/job/refactor_avalonia/lastSuccessfulBuild/api/json";
 
 		public UpdateCheckService()

@@ -4,6 +4,7 @@ using KyoshinEewViewer.Services;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
 using System;
+using System.Threading.Tasks;
 
 namespace KyoshinEewViewer.ViewModels
 {
@@ -49,6 +50,7 @@ namespace KyoshinEewViewer.ViewModels
 		{
 			UpdaterEnable = false;
 			await UpdateCheckService.Default.StartUpdater();
+			await Task.Delay(1000);
 			UpdaterEnable = true;
 		}
 
