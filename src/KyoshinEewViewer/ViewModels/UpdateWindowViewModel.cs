@@ -42,6 +42,16 @@ namespace KyoshinEewViewer.ViewModels
 			set => this.RaiseAndSetIfChanged(ref versionInfos, value);
 		}
 
+		[Reactive]
+		public bool UpdaterEnable { get; set; } = true;
+
+		public async void StartUpdater()
+		{
+			UpdaterEnable = false;
+			await UpdateCheckService.Default.StartUpdater();
+			UpdaterEnable = true;
+		}
+
 		public static void OpenUrl(string url)
 			=> UrlOpener.OpenUrl(url);
 	}

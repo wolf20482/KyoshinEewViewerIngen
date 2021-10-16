@@ -1,6 +1,6 @@
 using Avalonia;
 
-namespace KyoshinEewViewer.Updator
+namespace KyoshinEewViewer.Updater
 {
 	class Program
 	{

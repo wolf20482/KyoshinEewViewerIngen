@@ -28,6 +28,8 @@
     <PackageReference Include="Avalonia.Xaml.Behaviors" Version="0.10.8" />
     <PackageReference Include="ReactiveUI.Fody" Version="16.2.6" />
     
+    <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
+    
     <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
     <PackageReference Include="NReco.Logging.File" Version="1.1.2" />
     

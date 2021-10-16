@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using KyoshinEewViewer.Core.Models;
+using Mono.Unix;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +15,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace KyoshinEewViewer.Updator
+namespace KyoshinEewViewer.Updater
 {
 	public class MainWindow : Window
 	{
@@ -29,7 +30,7 @@ namespace KyoshinEewViewer.Updator
 #if DEBUG
 			this.AttachDevTools();
 #endif
-			Client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "KEViUpdator;" + Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown");
+			Client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "KEViUpdater;" + Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown");
 			this.FindControl<Button>("closeButton").Tapped += (s, e) => Close();
 			DoUpdate();
 		}
@@ -58,9 +59,9 @@ namespace KyoshinEewViewer.Updator
 				// アプリによる保存を待ってから
 				await Task.Delay(1000);
 				if (!File.Exists(Path.Combine(UpdateDirectory, SettingsFileName)))
-					throw new Exception("設定ファイルが見つかりません");
+					throw new Exception("KyoshinEewViewerが見つかりません");
 				if (JsonSerializer.Deserialize<KyoshinEewViewerConfiguration>(File.ReadAllText(Path.Combine(UpdateDirectory, SettingsFileName))) is not KyoshinEewViewerConfiguration config)
-					throw new Exception("設定ファイルを読み込むことができません");
+					throw new Exception("KyoshinEewViewerの設定ファイルを読み込むことができません");
 
 				var version = JsonSerializer.Deserialize<VersionInfo[]>(await Client.GetStringAsync(UpdateCheckUrl))
 					?.OrderByDescending(v => v.Version).Where(v => v.Version > config.SavedVersion).FirstOrDefault();
@@ -120,6 +121,9 @@ namespace KyoshinEewViewer.Updator
 
 				await Task.Run(() => ZipFile.ExtractToDirectory(tmpFileName, UpdateDirectory, true));
 				File.Delete(tmpFileName);
+				if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+					new UnixFileInfo(Path.Combine(UpdateDirectory, "KyoshinEewViewer")).FileAccessPermissions =
+						FileAccessPermissions.UserExecute | FileAccessPermissions.GroupExecute | FileAccessPermissions.OtherExecute;
 
 				infoText.Text = "更新が完了しました";
 				progress.IsIndeterminate = false;
