@@ -12,7 +12,7 @@ pipeline {
                             deleteDir()
                             git url: 'https://github.com/ingen084/KyoshinEewViewerIngen.git', branch: BRANCH_NAME
 
-                            bat 'publish_updator_custom.bat Windows win10-x64 merged true'
+                            bat 'publish_updater_custom.bat Windows win10-x64 merged true'
 
                             archiveArtifacts(artifacts: 'tmp/KyoshinEewViewer_ingen_*.zip', onlyIfSuccessful: true)
                         }
@@ -24,7 +24,7 @@ pipeline {
                             deleteDir()
                             git url: 'https://github.com/ingen084/KyoshinEewViewerIngen.git', branch: BRANCH_NAME
 
-                            sh 'chmod +x publish_updator_custom.sh;./publish_updator_custom.sh Linux linux-x64 merged true'
+                            sh 'chmod +x publish_updater_custom.sh;./publish_updater_custom.sh Linux linux-x64 merged true'
 
                             archiveArtifacts(artifacts: 'tmp/KyoshinEewViewer_ingen_*.zip', onlyIfSuccessful: true)
                         }
