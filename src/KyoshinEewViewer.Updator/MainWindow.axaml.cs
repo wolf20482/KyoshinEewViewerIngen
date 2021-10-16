@@ -49,53 +49,53 @@ namespace KyoshinEewViewer.Updator
 				while (Process.GetProcessesByName("KyoshinEewViewer").Any())
 				{
 					closeButton.IsEnabled = true;
-					infoText.Text = "KyoshinEewViewer ‚ÌƒvƒƒZƒX‚ªI—¹‚·‚é‚Ì‚ğ‘Ò‚Á‚Ä‚¢‚Ü‚·";
+					infoText.Text = "KyoshinEewViewer ã®ãƒ—ãƒ­ã‚»ã‚¹ãŒçµ‚äº†ã™ã‚‹ã®ã‚’å¾…ã£ã¦ã„ã¾ã™";
 					await Task.Delay(1000);
 				}
 				closeButton.IsEnabled = false;
-				infoText.Text = "“K—p‰Â”\‚ÈXV‚ğæ“¾‚µ‚Ä‚¢‚Ü‚·";
+				infoText.Text = "é©ç”¨å¯èƒ½ãªæ›´æ–°ã‚’å–å¾—ã—ã¦ã„ã¾ã™";
 
-				// ƒAƒvƒŠ‚É‚æ‚é•Û‘¶‚ğ‘Ò‚Á‚Ä‚©‚ç
+				// ã‚¢ãƒ—ãƒªã«ã‚ˆã‚‹ä¿å­˜ã‚’å¾…ã£ã¦ã‹ã‚‰
 				await Task.Delay(1000);
 				if (!File.Exists(Path.Combine(UpdateDirectory, SettingsFileName)))
-					throw new Exception("İ’èƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ");
+					throw new Exception("è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“");
 				if (JsonSerializer.Deserialize<KyoshinEewViewerConfiguration>(File.ReadAllText(Path.Combine(UpdateDirectory, SettingsFileName))) is not KyoshinEewViewerConfiguration config)
-					throw new Exception("İ’èƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚Ş‚±‚Æ‚ª‚Å‚«‚Ü‚¹‚ñ");
+					throw new Exception("è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã‚€ã“ã¨ãŒã§ãã¾ã›ã‚“");
 
 				var version = JsonSerializer.Deserialize<VersionInfo[]>(await Client.GetStringAsync(UpdateCheckUrl))
 					?.OrderByDescending(v => v.Version).Where(v => v.Version > config.SavedVersion).FirstOrDefault();
 
 				if (string.IsNullOrWhiteSpace(version?.Url))
 				{
-					infoText.Text = "“K—p‰Â”\‚ÈXV‚Í‚ ‚è‚Ü‚¹‚ñ";
+					infoText.Text = "é©ç”¨å¯èƒ½ãªæ›´æ–°ã¯ã‚ã‚Šã¾ã›ã‚“";
 					progress.IsIndeterminate = false;
 					closeButton.IsEnabled = true;
 					return;
 				}
 
-				infoText.Text = $"ƒo[ƒWƒ‡ƒ“ {version.Version} ‚ÉXV‚ğs‚¢‚Ü‚·";
+				infoText.Text = $"ãƒãƒ¼ã‚¸ãƒ§ãƒ³ {version.Version} ã«æ›´æ–°ã‚’è¡Œã„ã¾ã™";
 
 				var catalog = JsonSerializer.Deserialize<Dictionary<string, string>>(await Client.GetStringAsync(version.Url));
 				if (catalog == null)
-					throw new Exception("ƒAƒbƒvƒf[ƒgƒJƒ^ƒƒO‚ğæ“¾‚Å‚«‚Ü‚¹‚ñ");
+					throw new Exception("ã‚¢ãƒƒãƒ—ãƒ‡ãƒ¼ãƒˆã‚«ã‚¿ãƒ­ã‚°ã‚’å–å¾—ã§ãã¾ã›ã‚“");
 
 				if (!catalog.ContainsKey(RuntimeInformation.RuntimeIdentifier))
 				{
-					infoText.Text = "Œ»İ‚Ìƒvƒ‰ƒbƒgƒtƒH[ƒ€‚Å©“®XV‚Í—˜—p‚Å‚«‚Ü‚¹‚ñ";
+					infoText.Text = "ç¾åœ¨ã®ãƒ—ãƒ©ãƒƒãƒˆãƒ•ã‚©ãƒ¼ãƒ ã§è‡ªå‹•æ›´æ–°ã¯åˆ©ç”¨ã§ãã¾ã›ã‚“";
 					progress.IsIndeterminate = false;
 					closeButton.IsEnabled = true;
 					return;
 				}
 
-				infoText.Text = $"ƒo[ƒWƒ‡ƒ“ {version.Version} ‚ğƒ_ƒEƒ“ƒ[ƒh‚µ‚Ä‚¢‚Ü‚·";
+				infoText.Text = $"ãƒãƒ¼ã‚¸ãƒ§ãƒ³ {version.Version} ã‚’ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã—ã¦ã„ã¾ã™";
 				progress.IsIndeterminate = false;
 
 				var tmpFileName = Path.GetTempFileName();
-				// ƒ_ƒEƒ“ƒ[ƒhŠJn
+				// ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰é–‹å§‹
 				using (var fileStream = File.OpenWrite(tmpFileName))
 				{
 					using var response = await Client.GetAsync(catalog[RuntimeInformation.RuntimeIdentifier], HttpCompletionOption.ResponseHeadersRead);
-					progress.Maximum = response.Content.Headers.ContentLength ?? throw new Exception("DLƒTƒCƒY‚ªæ“¾‚Å‚«‚Ü‚¹‚ñ");
+					progress.Maximum = response.Content.Headers.ContentLength ?? throw new Exception("DLã‚µã‚¤ã‚ºãŒå–å¾—ã§ãã¾ã›ã‚“");
 
 					using var inputStream = await response.Content.ReadAsStreamAsync();
 
@@ -108,25 +108,25 @@ namespace KyoshinEewViewer.Updator
 							break;
 
 						progress.Value = total += readed;
-						progressText.Text = $"ƒ_ƒEƒ“ƒ[ƒh’†: {progress.Value / progress.Maximum * 100:0.00}%";
+						progressText.Text = $"ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ä¸­: {progress.Value / progress.Maximum * 100:0.00}%";
 
 						await fileStream.WriteAsync(buffer, 0, readed);
 					}
 				}
 
-				infoText.Text = "ƒtƒ@ƒCƒ‹‚ğ“WŠJ‚µ‚Ä‚¢‚Ü‚·";
+				infoText.Text = "ãƒ•ã‚¡ã‚¤ãƒ«ã‚’å±•é–‹ã—ã¦ã„ã¾ã™";
 				progress.IsIndeterminate = true;
 				progressText.Text = "";
 
 				await Task.Run(() => ZipFile.ExtractToDirectory(tmpFileName, UpdateDirectory, true));
 				File.Delete(tmpFileName);
 
-				infoText.Text = "XV‚ªŠ®—¹‚µ‚Ü‚µ‚½";
+				infoText.Text = "æ›´æ–°ãŒå®Œäº†ã—ã¾ã—ãŸ";
 				progress.IsIndeterminate = false;
 
 				await Task.Delay(1000);
 
-				infoText.Text = "ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚ğ‹N“®‚µ‚Ä‚¢‚Ü‚·";
+				infoText.Text = "ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã‚’èµ·å‹•ã—ã¦ã„ã¾ã™";
 
 				Process.Start(new ProcessStartInfo(Path.Combine(UpdateDirectory, "KyoshinEewViewer")) { WorkingDirectory = UpdateDirectory });
 
@@ -136,7 +136,7 @@ namespace KyoshinEewViewer.Updator
 			}
 			catch (Exception ex)
 			{
-				infoText.Text = "XV’†‚É–â‘è‚ª”­¶‚µ‚Ü‚µ‚½";
+				infoText.Text = "æ›´æ–°ä¸­ã«å•é¡ŒãŒç™ºç”Ÿã—ã¾ã—ãŸ";
 				progressText.Text = ex.Message;
 				progress.IsIndeterminate = false;
 				closeButton.IsEnabled = true;
