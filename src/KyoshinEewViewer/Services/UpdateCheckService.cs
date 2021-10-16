@@ -1,5 +1,5 @@
 ﻿using DynamicData.Binding;
-using KyoshinEewViewer.Models;
+using KyoshinEewViewer.Core.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;

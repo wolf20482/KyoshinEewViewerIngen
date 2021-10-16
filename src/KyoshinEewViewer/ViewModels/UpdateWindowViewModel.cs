@@ -1,5 +1,5 @@
 ﻿using Avalonia.Controls;
-using KyoshinEewViewer.Models;
+using KyoshinEewViewer.Core.Models;
 using KyoshinEewViewer.Services;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
